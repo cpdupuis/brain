@@ -19,6 +19,7 @@ public class Node implements Handler<Message<JsonObject>> {
     private final String outputAddress;
     private final MessageProducer<JsonObject> messageProducer;
     private final MessageConsumer<JsonObject> controlConsumer;
+    private final MessageConsumer<JsonObject> advertisingConsumer;
     private final Map<String,MessageConsumer<JsonObject>> messageConsumers;
     private Function<JsonObject, Optional<JsonObject>> reactor;
     private boolean wantAddTopic;
@@ -37,6 +38,7 @@ public class Node implements Handler<Message<JsonObject>> {
         this.reactor = reactor;
         this.messageConsumers = new HashMap<>();
         this.controlConsumer = eventBus.<JsonObject>consumer(Channels.CONTROL).handler(this);
+        this.advertisingConsumer = eventBus.<JsonObject>consumer(Channels.ADVERTISEMENT).handler(this);
         this.wantAddTopic = true;
         this.advertisingChance = Constants.ADVERTISING_CHANCE;
         this.isClosed = false;   
@@ -95,6 +97,10 @@ public class Node implements Handler<Message<JsonObject>> {
         this.wantAddTopic = wantAddTopic;
     }
 
+    boolean isListeningTopic(String address) {
+        return messageConsumers.keySet().contains(address);
+    }
+
     void setAdvertisingChance(double advertisingChance) {
         this.advertisingChance = advertisingChance;
     }
@@ -111,6 +117,7 @@ public class Node implements Handler<Message<JsonObject>> {
         isClosed = true;
         messageProducer.close();
         controlConsumer.unregister();
+        advertisingConsumer.unregister();
         for (var messageConsumer : messageConsumers.values()) {
             messageConsumer.unregister();
         }

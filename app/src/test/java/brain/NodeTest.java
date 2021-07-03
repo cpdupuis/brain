@@ -21,12 +21,14 @@ import io.vertx.junit5.VertxTestContext;
 @ExtendWith(VertxExtension.class)
 public class NodeTest {
     private static EventBus eventBus;
-    private static MessageProducer<JsonObject> messageProducer;
+    private static MessageProducer<JsonObject> controlMessageProducer;
+    private static MessageProducer<JsonObject> advertisementMessageProducer;
 
     @BeforeAll
     public static void setupAll(Vertx vertx, VertxTestContext testContext) {
         eventBus = vertx.eventBus();
-        messageProducer = eventBus.publisher(Channels.CONTROL);
+        controlMessageProducer = eventBus.publisher(Channels.CONTROL);
+        advertisementMessageProducer = eventBus.publisher(Channels.ADVERTISEMENT);
         testContext.completeNow();
     }
 
@@ -46,7 +48,7 @@ public class NodeTest {
         JsonObject message = new JsonObject();
         message.put(Constants.COMMAND, Commands.CLOSE);
         message.put(Constants.ADDRESS, node.getAddress());
-        messageProducer.write(message).map(v -> testContext.verify(() -> {
+        controlMessageProducer.write(message).map(v -> testContext.verify(() -> {
             assertTrue(node.isClosed());
             testContext.completeNow();
         })).onFailure(ex -> testContext.failNow(ex));
@@ -64,7 +66,20 @@ public class NodeTest {
         node.setAdvertisingChance(1.0);
         JsonObject json = new JsonObject();
         json.put(Constants.COMMAND, Commands.TICK);
-        messageProducer.write(json);
+        controlMessageProducer.write(json);
+    }
+
+    @Test
+    public void testRegister(Vertx vertx, VertxTestContext testContext) {
+        Node node = new Node(eventBus, json -> Optional.empty());
+        assertFalse(node.isListeningTopic("abc123"));
+        JsonObject json = new JsonObject();
+        json.put(Constants.ADDRESS, "abc123");
+        advertisementMessageProducer.write(json).map(v -> testContext.verify(() -> {
+            assertTrue(node.isListeningTopic("abc123"));
+            testContext.completeNow();
+        })).onFailure(ex -> testContext.failNow(ex));
+
     }
 
 }
