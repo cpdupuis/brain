@@ -9,6 +9,7 @@ repositories {
 }
 
 dependencies {
+    implementation "io.vertx:vertx-core:${vertx_version}"
     // Use JUnit Jupiter for testing.
     testImplementation 'org.junit.jupiter:junit-jupiter:5.7.1'
 }
