@@ -36,7 +36,7 @@ public class Node implements Handler<Message<JsonObject>> {
         this.inputAddressSupplier = inputAddressSupplier;
         this.reactor = reactor;
         this.messageConsumers = new HashMap<>();
-        this.controlConsumer = eventBus.<JsonObject>consumer("control").handler(this);
+        this.controlConsumer = eventBus.<JsonObject>consumer(Constants.CONTROL).handler(this);
         
     }
 
@@ -49,16 +49,16 @@ public class Node implements Handler<Message<JsonObject>> {
     }
 
     private void handleControl(JsonObject jsonObject) {
-        String command = jsonObject.getString("command");
+        String command = jsonObject.getString(Constants.COMMAND);
         switch (command) {
-            case "tick" -> handleControlTick();
+            case Commands.TICK -> handleControlTick();
             default -> throw new IllegalStateException("No such command: "+command);
         }
     }
 
     @Override
     public void handle(Message<JsonObject> event) {
-        if (event.address().equals("control")) {
+        if (event.address().equals(Constants.CONTROL)) {
             handleControl(event.body());
         } else {
             Optional<JsonObject> reaction = reactor.apply(event.body());
