@@ -1,6 +1,8 @@
 package brain;
 
+import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
+import static org.junit.jupiter.api.Assertions.assertNotNull;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
 import java.util.Optional;
@@ -33,9 +35,11 @@ public class NodeTest {
         Node node = new Node(eventBus, json -> Optional.empty());
         testContext.verify(() -> {
             assertFalse(node.isClosed());
+            assertNotNull(node.getAddress());
             testContext.completeNow();
         });
     }
+
     @Test
     public void testClose(Vertx vertx, VertxTestContext testContext) {
         Node node = new Node(eventBus, json -> Optional.empty());
@@ -46,6 +50,21 @@ public class NodeTest {
             assertTrue(node.isClosed());
             testContext.completeNow();
         })).onFailure(ex -> testContext.failNow(ex));
+    }
+
+    @Test
+    public void testAdvertise(Vertx vertx, VertxTestContext testContext) {
+        Node node = new Node(eventBus, json -> Optional.empty());
+        eventBus.<JsonObject>consumer(Channels.ADVERTISEMENT, msg -> {
+            testContext.verify(() -> {
+               assertEquals(node.getAddress(), msg.body().getString(Constants.ADDRESS));
+               testContext.completeNow();
+            });
+        });
+        node.setAdvertisingChance(1.0);
+        JsonObject json = new JsonObject();
+        json.put(Constants.COMMAND, Commands.TICK);
+        messageProducer.write(json);
     }
 
 }

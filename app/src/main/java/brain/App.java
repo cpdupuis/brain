@@ -3,9 +3,6 @@
  */
 package brain;
 
-import java.util.HashSet;
-import java.util.Set;
-
 import io.vertx.core.Vertx;
 import io.vertx.core.eventbus.EventBus;
 
@@ -14,6 +11,5 @@ public class App {
     public static void main(String[] args) {
         Vertx vertx = Vertx.vertx();
         EventBus eventBus = vertx.eventBus();
-        Set<Node> nodes = new HashSet<>();
     }
 }
