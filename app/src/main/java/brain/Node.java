@@ -26,6 +26,8 @@ public class Node implements Handler<Message<JsonObject>> {
     private final Map<String,MessageConsumer<JsonObject>> messageConsumers;
     private Function<JsonObject, Optional<JsonObject>> reactor;
     private boolean wantAddTopic;
+    private double advertisingChance;
+    private boolean isClosed;
 
     // A Node has:
     // - input topics, that it listens to
@@ -40,7 +42,8 @@ public class Node implements Handler<Message<JsonObject>> {
         this.messageConsumers = new HashMap<>();
         this.controlConsumer = eventBus.<JsonObject>consumer(Channels.CONTROL).handler(this);
         this.wantAddTopic = true;
-        
+        this.advertisingChance = Constants.ADVERTISING_CHANCE;
+        this.isClosed = false;   
     }
 
 
@@ -54,7 +57,7 @@ public class Node implements Handler<Message<JsonObject>> {
     private void handleControlTick() {
         // Maybe we should advertise
         double d = ThreadLocalRandom.current().nextDouble();
-        if (d < Constants.ADVERTISING_CHANCE) {
+        if (d < advertisingChance) {
             JsonObject advertisement = new JsonObject();
             advertisement.put(Constants.ADDRESS, outputAddress);
             eventBus.publish(Channels.ADVERTISEMENT, advertisement);
@@ -65,7 +68,7 @@ public class Node implements Handler<Message<JsonObject>> {
         String command = jsonObject.getString(Constants.COMMAND);
         switch (command) {
             case Commands.TICK -> handleControlTick();
-            case Commands.CLOSE -> close();
+            case Commands.CLOSE -> Boolean.logicalOr(outputAddress.equals(jsonObject.getString(Constants.ADDRESS)), close());
             default -> throw new IllegalStateException("No such command: "+command);
         }
     }
@@ -92,14 +95,30 @@ public class Node implements Handler<Message<JsonObject>> {
         }
     }
 
-    public Future<Void> close() {
-        List<Future> closing = new ArrayList<>();
-        closing.add(messageProducer.close());
-        closing.add(controlConsumer.unregister());
+    void setWantAddTopic(boolean wantAddTopic) {
+        this.wantAddTopic = wantAddTopic;
+    }
+
+    void setAdvertisingChance(double advertisingChance) {
+        this.advertisingChance = advertisingChance;
+    }
+
+    boolean isClosed() {
+        return isClosed;
+    }
+
+    String getAddress() {
+        return outputAddress;
+    }
+     
+    private boolean close() {
+        isClosed = true;
+        messageProducer.close();
+        controlConsumer.unregister();
         for (var messageConsumer : messageConsumers.values()) {
-            closing.add(messageConsumer.unregister());
+            messageConsumer.unregister();
         }
-       return CompositeFuture.all(closing).compose(v -> Future.<Void>succeededFuture());
+        return true;
     }
 
 }
