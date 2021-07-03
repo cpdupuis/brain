@@ -3,12 +3,17 @@
  */
 package brain;
 
+import java.util.HashSet;
+import java.util.Set;
+
+import io.vertx.core.Vertx;
+import io.vertx.core.eventbus.EventBus;
+
 public class App {
-    public String getGreeting() {
-        return "Hello World!";
-    }
 
     public static void main(String[] args) {
-        System.out.println(new App().getGreeting());
+        Vertx vertx = Vertx.vertx();
+        EventBus eventBus = vertx.eventBus();
+        Set<Node> nodes = new HashSet<>();
     }
 }
