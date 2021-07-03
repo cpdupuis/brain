@@ -11,6 +11,7 @@ import org.junit.jupiter.api.BeforeAll;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
 
+import io.vertx.core.Future;
 import io.vertx.core.Vertx;
 import io.vertx.core.eventbus.EventBus;
 import io.vertx.core.eventbus.MessageProducer;
@@ -72,14 +73,34 @@ public class NodeTest {
     @Test
     public void testRegister(Vertx vertx, VertxTestContext testContext) {
         Node node = new Node(eventBus, json -> Optional.empty());
-        assertFalse(node.isListeningTopic("abc123"));
+        String address = "abc123";
+        assertFalse(node.isListeningTopic(address));
         JsonObject json = new JsonObject();
-        json.put(Constants.ADDRESS, "abc123");
+        json.put(Constants.ADDRESS, address);
         advertisementMessageProducer.write(json).map(v -> testContext.verify(() -> {
-            assertTrue(node.isListeningTopic("abc123"));
+            assertTrue(node.isListeningTopic(address));
             testContext.completeNow();
         })).onFailure(ex -> testContext.failNow(ex));
 
+    }
+
+    @Test
+    public void testHandle(Vertx vertx, VertxTestContext vertxTestContext) {
+        Node node = new Node(eventBus, json -> Optional.of(json));
+        String nodeAddress = node.getAddress();
+        JsonObject message = new JsonObject();
+        message.put("hello", "world");
+        eventBus.<JsonObject>consumer(nodeAddress).handler(msg -> vertxTestContext.verify(() -> {
+            assertEquals("world", msg.body().getString("hello"));
+            vertxTestContext.completeNow();
+        }));
+        String address = "abc123";
+        JsonObject json = new JsonObject();
+        json.put(Constants.ADDRESS, address);
+        advertisementMessageProducer.write(json).flatMap(v -> {
+            eventBus.publish(address, message);
+            return Future.succeededFuture();
+        });
     }
 
 }
