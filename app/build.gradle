@@ -11,7 +11,8 @@ repositories {
 dependencies {
     implementation "io.vertx:vertx-core:${vertx_version}"
     implementation "io.vertx:vertx-junit5:${vertx_version}"
-    
+    implementation "org.apache.logging.log4j:log4j-api:${log4j_version}"
+    implementation "org.apache.logging.log4j:log4j-core:${log4j_version}"
     // Use JUnit Jupiter for testing.
     testImplementation 'org.junit.jupiter:junit-jupiter:5.7.1'
 }

@@ -7,6 +7,9 @@ import java.util.UUID;
 import java.util.concurrent.ThreadLocalRandom;
 import java.util.function.Function;
 
+import org.apache.logging.log4j.LogManager;
+import org.apache.logging.log4j.Logger;
+
 import io.vertx.core.Handler;
 import io.vertx.core.eventbus.EventBus;
 import io.vertx.core.eventbus.Message;
@@ -15,12 +18,13 @@ import io.vertx.core.eventbus.MessageProducer;
 import io.vertx.core.json.JsonObject;
 
 public class Node implements Handler<Message<JsonObject>> {
+    private static final Logger logger = LogManager.getLogger();
     private final EventBus eventBus;
     private final String outputAddress;
     private final MessageProducer<JsonObject> messageProducer;
     private final MessageConsumer<JsonObject> controlConsumer;
     private final MessageConsumer<JsonObject> advertisingConsumer;
-    private final Map<String,MessageConsumer<JsonObject>> messageConsumers;
+    private final Map<String, MessageConsumer<JsonObject>> messageConsumers;
     private Function<JsonObject, Optional<JsonObject>> reactor;
     private boolean wantAddTopic;
     private double advertisingChance;
@@ -41,12 +45,13 @@ public class Node implements Handler<Message<JsonObject>> {
         this.advertisingConsumer = eventBus.<JsonObject>consumer(Channels.ADVERTISEMENT).handler(this);
         this.wantAddTopic = true;
         this.advertisingChance = Constants.ADVERTISING_CHANCE;
-        this.isClosed = false;   
+        this.isClosed = false;
+        logger.debug("Started node {}", outputAddress);
     }
 
-
     private void addInputAddress(String newInputAddress) {
-        if (!messageConsumers.containsKey(newInputAddress)) {
+        if (!messageConsumers.containsKey(newInputAddress) && !outputAddress.equals(newInputAddress)) {
+            logger.info("{} Adding input address {}", outputAddress, newInputAddress);
             MessageConsumer<JsonObject> newConsumer = eventBus.<JsonObject>consumer(newInputAddress).handler(this);
             messageConsumers.put(newInputAddress, newConsumer);
         }
@@ -54,8 +59,10 @@ public class Node implements Handler<Message<JsonObject>> {
 
     private void handleControlTick() {
         // Maybe we should advertise
+        logger.info("{} received tick", outputAddress);
         double d = ThreadLocalRandom.current().nextDouble();
         if (d < advertisingChance) {
+            logger.info("{} advertising", outputAddress);
             JsonObject advertisement = new JsonObject();
             advertisement.put(Constants.ADDRESS, outputAddress);
             eventBus.publish(Channels.ADVERTISEMENT, advertisement);
@@ -66,8 +73,9 @@ public class Node implements Handler<Message<JsonObject>> {
         String command = jsonObject.getString(Constants.COMMAND);
         switch (command) {
             case Commands.TICK -> handleControlTick();
-            case Commands.CLOSE -> Boolean.logicalOr(outputAddress.equals(jsonObject.getString(Constants.ADDRESS)), close());
-            default -> throw new IllegalStateException("No such command: "+command);
+            case Commands.CLOSE -> Boolean.logicalOr(outputAddress.equals(jsonObject.getString(Constants.ADDRESS)),
+                    close());
+            default -> throw new IllegalStateException("No such command: " + command);
         }
     }
 
@@ -87,8 +95,8 @@ public class Node implements Handler<Message<JsonObject>> {
 
     private void handleAdvertisement(JsonObject body) {
         if (wantAddTopic) {
-            wantAddTopic = false;
             String newInputAddress = body.getString(Constants.ADDRESS);
+            wantAddTopic = false;
             addInputAddress(newInputAddress);
         }
     }
@@ -112,7 +120,7 @@ public class Node implements Handler<Message<JsonObject>> {
     String getAddress() {
         return outputAddress;
     }
-     
+
     private boolean close() {
         isClosed = true;
         messageProducer.close();

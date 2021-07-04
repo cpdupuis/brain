@@ -5,11 +5,18 @@ package brain;
 
 import io.vertx.core.Vertx;
 import io.vertx.core.eventbus.EventBus;
+import io.vertx.core.json.JsonObject;
 
 public class App {
 
     public static void main(String[] args) {
         Vertx vertx = Vertx.vertx();
         EventBus eventBus = vertx.eventBus();
+        Node node = new Node(eventBus, null);
+        vertx.setPeriodic(1000L, timerId -> {
+            JsonObject json = new JsonObject();
+            json.put(Constants.COMMAND, Commands.TICK);
+            eventBus.publish(Channels.CONTROL, json);
+        });
     }
 }
