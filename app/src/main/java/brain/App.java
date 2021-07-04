@@ -12,7 +12,9 @@ public class App {
     public static void main(String[] args) {
         Vertx vertx = Vertx.vertx();
         EventBus eventBus = vertx.eventBus();
-        Node node = new Node(eventBus, null);
+        Node node1 = new Node(eventBus, null);
+        Node node2 = new Node(eventBus, null);
+        Node node3 = new Node(eventBus, null);
         vertx.setPeriodic(1000L, timerId -> {
             JsonObject json = new JsonObject();
             json.put(Constants.COMMAND, Commands.TICK);

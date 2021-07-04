@@ -49,17 +49,9 @@ public class Node implements Handler<Message<JsonObject>> {
         logger.debug("Started node {}", outputAddress);
     }
 
-    private void addInputAddress(String newInputAddress) {
-        if (!messageConsumers.containsKey(newInputAddress) && !outputAddress.equals(newInputAddress)) {
-            logger.info("{} Adding input address {}", outputAddress, newInputAddress);
-            MessageConsumer<JsonObject> newConsumer = eventBus.<JsonObject>consumer(newInputAddress).handler(this);
-            messageConsumers.put(newInputAddress, newConsumer);
-        }
-    }
-
     private void handleControlTick() {
         // Maybe we should advertise
-        logger.info("{} received tick", outputAddress);
+        logger.debug("{} received tick", outputAddress);
         double d = ThreadLocalRandom.current().nextDouble();
         if (d < advertisingChance) {
             logger.info("{} advertising", outputAddress);
@@ -96,8 +88,12 @@ public class Node implements Handler<Message<JsonObject>> {
     private void handleAdvertisement(JsonObject body) {
         if (wantAddTopic) {
             String newInputAddress = body.getString(Constants.ADDRESS);
-            wantAddTopic = false;
-            addInputAddress(newInputAddress);
+            if (!messageConsumers.containsKey(newInputAddress) && !outputAddress.equals(newInputAddress)) {
+                logger.info("{} Adding input address {}", outputAddress, newInputAddress);
+                MessageConsumer<JsonObject> newConsumer = eventBus.<JsonObject>consumer(newInputAddress).handler(this);
+                messageConsumers.put(newInputAddress, newConsumer);
+                wantAddTopic = false;
+            }
         }
     }
 
