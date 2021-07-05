@@ -3,6 +3,12 @@ plugins {
     id 'jacoco'
 }
 
+java {
+    toolchain {
+        languageVersion = JavaLanguageVersion.of(16)
+    }
+}
+
 repositories {
     // Use Maven Central for resolving dependencies.
     mavenCentral()
